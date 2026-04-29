@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""detect_state.py — probe a project for webapp-test-orchestrator state.
+"""detect_state.py — probe a project for webtest-orch state.
 
 Output JSON describing what the skill needs to know to choose between
 BOOTSTRAP / REPLAY / HYBRID modes. Designed to be invoked as a black box;
@@ -204,7 +204,7 @@ def render_human(state: dict[str, Any]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Probe project state for webapp-test-orchestrator skill.",
+        description="Probe project state for webtest-orch skill.",
     )
     parser.add_argument("--json", action="store_true", help="Output JSON to stdout")
     parser.add_argument("--human", action="store_true", help="Output a human-readable table")

@@ -1,0 +1,47 @@
+{
+  "name": "webtest-orch",
+  "version": "0.3.0-beta",
+  "description": "Claude Code skill for end-to-end web app testing — image-budget-safe, deterministic replay, multi-stack scaffolding",
+  "license": "MIT",
+  "author": "webtest-orch contributors",
+  "homepage": "https://github.com/CreatmanCEO/webtest-orch",
+  "bugs": "https://github.com/CreatmanCEO/webtest-orch/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CreatmanCEO/webtest-orch.git"
+  },
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "e2e",
+    "testing",
+    "playwright",
+    "axe-core",
+    "accessibility",
+    "wcag",
+    "supabase",
+    "nextjs"
+  ],
+  "bin": {
+    "webtest-orch": "./bin/webtest-orch.js"
+  },
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "bin/",
+    "scripts/",
+    "reference/",
+    "templates/",
+    "examples/",
+    "install.sh"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo 'Python tests live under tests/python/. Run: pip install -r requirements-dev.txt && pytest'"
+  }
+}

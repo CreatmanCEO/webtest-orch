@@ -1,10 +1,10 @@
 ---
-name: webapp-test-orchestrator
+name: webtest-orch
 description: End-to-end web app testing. Use when user says "test the app", "run e2e", "smoke test", "regression run", "check the login/onboarding/chat flow", "audit accessibility", "test responsive", or "find bugs in <url>" — even when Playwright is not named. Bootstraps Playwright + axe-core, runs LLM exploration on first run, deterministic replay afterward, emits markdown report + bugs.json + *.spec.ts files with run-diffing.
 trigger: /test-app
 ---
 
-# webapp-test-orchestrator
+# webtest-orch
 
 End-to-end testing orchestrator for web applications. Splits into **first-run exploratory** (LLM-driven via Playwright MCP) and **nth-run deterministic replay** (`npx playwright test`, ~zero LLM tokens). Emits regression specs, normalized bugs.json, markdown + HTML report.
 

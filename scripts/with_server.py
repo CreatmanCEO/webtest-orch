@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """with_server.py — start a dev server, wait for ports to listen, manage teardown.
 
-Used by webapp-test-orchestrator skill to bring up a project's dev server
+Used by webtest-orch skill to bring up a project's dev server
 before Playwright runs. Black-box: invoke with --help, do not read source.
 
 Examples:

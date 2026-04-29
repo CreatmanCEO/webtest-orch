@@ -6,13 +6,38 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Planned for `0.3.0`
+### Planned for `0.4.0`
 - Vision-classifier auto-loop (`vision_dispatch.py`)
 - Console LLM auto-triage (`console_llm_triage.py` with batched subagent)
 - Performance / Lighthouse audit script
 - Tracker integration CLI (`file_bugs.py --linear / --github / --jira`)
 - Regression watchlist mechanism (sticky fixed → escalate on regression)
 - Layout integrity assertions (max-width, icon grouping patterns)
+
+## [0.3.0-beta] - 2026-04-29
+
+Distribution milestone — installable via `npx webtest-orch@beta install` instead of git-clone-and-bash.
+
+### Added
+- **npm package** `webtest-orch` published to npm registry under `beta` tag.
+  Install path: `npx webtest-orch@beta install` (no global install needed).
+- **`bin/webtest-orch.js`** — CLI with subcommands:
+  - `install` — copy skill into `~/.claude/skills/webtest-orch/`
+  - `install --symlink` — symlink for local development
+  - `uninstall` — remove installed skill (npm package untouched)
+  - `status` — show install state + MCP availability
+  - `version`, `help`
+- **`.github/workflows/release.yml`** — on `v*` tag: lint + tests, extract release
+  notes from CHANGELOG, create GitHub Release (prerelease for beta/alpha/rc),
+  publish to npm with provenance. Requires `NPM_TOKEN` repo secret to push to npm.
+
+### Changed
+- **Skill name renamed** `webapp-test-orchestrator` → `webtest-orch` in SKILL.md
+  frontmatter. Installs into `~/.claude/skills/webtest-orch/`. Existing
+  `~/.claude/skills/webapp-test-orchestrator/` directories from `0.1.x`/`0.2.x`
+  are left in place (delete manually if not needed).
+- README install section rewritten around the npm one-liner. Older `bash install.sh`
+  flow documented as the alternative for development / no-npm setups.
 
 ## [0.2.0-beta] - 2026-04-29
 
@@ -120,6 +145,7 @@ Initial public beta. Validated end-to-end on a real production app
 - macOS / Linux installers untested in CI; help wanted (see
   `os-compatibility-report` issue template).
 
-[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.2.0-beta...HEAD
+[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.0-beta...HEAD
+[0.3.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.2.0-beta...v0.3.0-beta
 [0.2.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.1.0-beta...v0.2.0-beta
 [0.1.0-beta]: https://github.com/CreatmanCEO/webtest-orch/releases/tag/v0.1.0-beta

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — install webapp-test-orchestrator into Claude Code skill dirs.
+# install.sh — install webtest-orch into Claude Code skill dirs.
 #
-# Copies (or symlinks) this directory into ~/.claude/skills/webapp-test-orchestrator/
+# Copies (or symlinks) this directory into ~/.claude/skills/webtest-orch/
 # and verifies that required MCP servers are registered.
 #
 # Usage:
@@ -25,7 +25,7 @@ for arg in "$@"; do
 done
 
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
-TARGET_DIR="${HOME}/.claude/skills/webapp-test-orchestrator"
+TARGET_DIR="${HOME}/.claude/skills/webtest-orch"
 
 c_red()   { printf '\033[31m%s\033[0m\n' "$*"; }
 c_green() { printf '\033[32m%s\033[0m\n' "$*"; }
