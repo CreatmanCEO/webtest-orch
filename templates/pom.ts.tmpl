@@ -1,0 +1,41 @@
+// PLACEHOLDERS: __PAGE_NAME__ __ROUTE_PATH__
+// Page Object Model — one per discovered flow. Use locator priority:
+//   getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > CSS/XPath
+
+import { type Page, type Locator, expect } from '@playwright/test';
+
+export class __PAGE_NAME__Page {
+  readonly page: Page;
+
+  // Add discovered locators here. Examples:
+  // readonly emailField: Locator;
+  // readonly passwordField: Locator;
+  // readonly submitButton: Locator;
+  // readonly errorMessage: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+
+    // Initialize locators using getByRole / getByLabel first. Examples:
+    // this.emailField = page.getByLabel(/email/i);
+    // this.passwordField = page.getByLabel(/password/i);
+    // this.submitButton = page.getByRole('button', { name: /sign ?in/i });
+    // this.errorMessage = page.getByRole('alert');
+  }
+
+  async goto() {
+    await this.page.goto('__ROUTE_PATH__');
+  }
+
+  // Add page-specific actions here. Examples:
+  //
+  // async signIn(email: string, password: string) {
+  //   await this.emailField.fill(email);
+  //   await this.passwordField.fill(password);
+  //   await this.submitButton.click();
+  // }
+  //
+  // async expectLoaded() {
+  //   await expect(this.page).toHaveTitle(/Expected fragment/);
+  // }
+}

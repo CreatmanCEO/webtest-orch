@@ -1,0 +1,54 @@
+// PLACEHOLDERS: __PROJECT_BASE_URL__
+// Variant for PUBLIC sites — no auth, no setup project, no storageState.
+// Skill picks this template when .env.test has no TEST_USER_EMAIL/PASSWORD.
+
+import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.test' });
+
+const baseURL = process.env.TEST_BASE_URL || '__PROJECT_BASE_URL__';
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    ['list'],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['html', { outputFolder: 'test-results/html', open: 'never' }],
+  ],
+  use: {
+    baseURL,
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    actionTimeout: 10_000,
+    navigationTimeout: 30_000,
+  },
+
+  projects: [
+    {
+      name: 'chromium-desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 } },
+    },
+    {
+      name: 'chromium-laptop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1366, height: 768 } },
+    },
+    {
+      name: 'chromium-mobile',
+      use: { ...devices['iPhone 13'], browserName: 'chromium' },
+    },
+    {
+      name: 'pixel5',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 13'] },
+    },
+  ],
+});
