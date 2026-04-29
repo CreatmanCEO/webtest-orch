@@ -71,7 +71,7 @@ def _spawn(command: str, cwd: str | None, extra_env: dict[str, str], label: str)
             env=env,
             stdout=sys.stderr,
             stderr=sys.stderr,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,  # type: ignore[attr-defined, unused-ignore]
         )
     else:
         proc = subprocess.Popen(
