@@ -95,15 +95,74 @@ def extract_selector(error_snippet: str, error_msg: str) -> str:
     return ""
 
 
-def severity_from_signals(bug: dict) -> str:
+_SEVERITY_OVERRIDE_RE = re.compile(r"\[severity:(S[0-3])\]", re.I)
+_SPEC_SEVERITY_COMMENT_RE = re.compile(
+    r"//\s*@severity:\s*(S[0-3])\b.*?\n\s*test\([\"'](.+?)[\"']",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def severity_overrides_from_spec_file(spec_path: Path) -> dict[str, str]:
+    """Parse `// @severity: S0` comments preceding `test(...)` calls.
+
+    Returns {test_title: severity}. Test title matches the string passed to test().
+
+    Example spec:
+        // @severity: S0
+        test('checkout completely broken', async ({ page }) => { ... });
+    """
+    if not spec_path.is_file():
+        return {}
+    try:
+        text = spec_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    out: dict[str, str] = {}
+    for m in _SPEC_SEVERITY_COMMENT_RE.finditer(text):
+        sev = m.group(1).upper()
+        title = m.group(2).strip()
+        out[title] = sev
+    return out
+
+
+def extract_severity_override(bug: dict, spec_overrides: dict[str, str] | None = None) -> str | None:
+    """Look for severity override in priority order:
+
+    1. `[severity:S0]` inline tag in issueLine or title
+    2. Spec-file comment `// @severity: S0` preceding `test('...')` matching this
+       bug's specTitle
+    3. None — fall through to heuristic
+    """
+    # 1. Inline tag
+    for source in ((bug.get("issueLine") or ""), (bug.get("title") or "")):
+        m = _SEVERITY_OVERRIDE_RE.search(source)
+        if m:
+            return m.group(1).upper()
+    # 2. Spec-file comment
+    if spec_overrides:
+        spec_title = bug.get("specTitle") or ""
+        if spec_title in spec_overrides:
+            return spec_overrides[spec_title]
+    return None
+
+
+def severity_from_signals(bug: dict, spec_overrides: dict[str, str] | None = None) -> str:
     """Infer severity from title + error + issueLine.
 
-    issueLine takes priority because it's the structured tag from spec.ts.tmpl
-    (e.g. 'a11y[critical] ...', 'heading-jump: ...', 'touch-target: ...').
+    Priority order:
+    1. Explicit `[severity:S0]` override in issueLine or title (highest)
+    2. Spec-file comment `// @severity: S0` matching specTitle
+    3. Structured tag in issueLine (a11y impact, heading-jump, touch-target, etc.)
+    4. Heuristic match on title + error message keywords
     """
+    # ── 1+2. Explicit override wins ─────────────────────────────────────
+    override = extract_severity_override(bug, spec_overrides)
+    if override:
+        return override
+
     issue_line = (bug.get("issueLine") or "").lower()
 
-    # ── Highest-priority signals: structured issue tags from spec template ──
+    # ── 2. Structured issue tags from spec template ─────────────────────
     if issue_line:
         # axe impact maps directly
         if "a11y[critical]" in issue_line or "a11y[serious]" in issue_line:
@@ -174,9 +233,9 @@ def compute_fingerprint(bug: dict) -> str:
     return hashlib.sha256(composite.encode("utf-8")).hexdigest()[:8]
 
 
-def enrich_bug(bug: dict, run_id: str) -> dict:
+def enrich_bug(bug: dict, run_id: str, spec_overrides: dict[str, str] | None = None) -> dict:
     fp = compute_fingerprint(bug)
-    sev = severity_from_signals(bug)
+    sev = severity_from_signals(bug, spec_overrides)
     pri = priority_from_severity(sev)
     return {
         **bug,
@@ -245,6 +304,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--previous", help="bugs.json from previous run (optional)")
     p.add_argument("--out", required=True, help="output bugs.json with fingerprints + diff")
     p.add_argument("--diff", help="optional diff summary file")
+    p.add_argument(
+        "--project-root",
+        help="Root of project under test (used to find spec files for severity overrides). "
+        "Default: parent of <current>'s grandparent dir, i.e. reports/<run-id>/raw_bugs.json → cwd",
+    )
     args = p.parse_args(argv)
 
     cur_path = Path(args.current)
@@ -262,7 +326,19 @@ def main(argv: list[str] | None = None) -> int:
         prev_data = json.loads(Path(args.previous).read_text(encoding="utf-8"))
         prev_bugs = prev_data.get("bugs", []) if isinstance(prev_data, dict) else prev_data
 
-    enriched = [enrich_bug(b, run_id) for b in cur_bugs]
+    # Build spec → severity-override map by parsing each unique specFile once
+    project_root = (args.project_root and Path(args.project_root)) or cur_path.parent.parent.parent
+    spec_overrides: dict[str, str] = {}
+    seen_files: set[str] = set()
+    for b in cur_bugs:
+        sf = b.get("specFile")
+        if not sf or sf in seen_files:
+            continue
+        seen_files.add(sf)
+        spec_path = project_root / sf
+        spec_overrides.update(severity_overrides_from_spec_file(spec_path))
+
+    enriched = [enrich_bug(b, run_id, spec_overrides) for b in cur_bugs]
     diff_result = diff_runs(enriched, prev_bugs)
 
     out_path = Path(args.out)

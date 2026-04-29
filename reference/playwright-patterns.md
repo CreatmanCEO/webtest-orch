@@ -37,6 +37,28 @@ These poll automatically. Prefer them over manual loops or `waitForTimeout`.
 
 `expect(locator).toBeVisible()` waits up to the test/expect timeout; `locator.isVisible()` returns immediately and is non-retrying — correct for branching, wrong for assertions.
 
+## Tabs vs buttons (common a11y miss)
+
+Many SPAs (Tailwind / headless-UI / radix without `Tabs` primitive) render
+visual tab UIs using `<button>` elements WITHOUT `role="tab"`. Result:
+
+```ts
+// FAILS — locator returns 0 elements because there is no role=tab anywhere
+await page.getByRole('tab', { name: /Free Chat/i }).click();
+```
+
+When ARIA snapshot during exploration shows the element as `button [ref=eN]`
+but the visual treatment is a tab strip, generate the spec with
+`getByRole('button', ...)` AND log the missing `role="tab"` as a soft a11y
+finding:
+
+```ts
+issues.push(`a11y[moderate] aria-tabs: visual tab strip uses <button> without role="tab"`);
+```
+
+This way the test passes (button locator works) and the a11y bug is recorded
+(screen-reader users can't navigate the tabs as a tablist).
+
 ## Anti-flake patterns
 
 - **Listeners attach BEFORE `page.goto()`** — `page.on('console', ...)` registered after navigation misses early errors.

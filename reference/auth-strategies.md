@@ -10,7 +10,65 @@ The skill prefers **API-based login** over UI-driven login because API login is 
 
 This means **every test runs already authenticated** without re-doing the login flow per test — saves time and reduces flake.
 
-## Pattern 1 — API login + JWT (preferred)
+## Pattern 0 — Onboarding overlays (run before any pattern below)
+
+Apps with feature-discovery tours, hint overlays, or "welcome" modals will
+**fail every spec** if those overlays intercept the first click. The
+`auth.setup.ts.tmpl` template ships a `seedOnboardingFlags()` helper that
+runs after authentication and before `storageState` is saved.
+
+It does two things:
+
+1. Auto-flips `localStorage` keys matching common patterns to `"true"`:
+   `*-features-discovered`, `*-onboarding-complete`, `*-tour-seen`,
+   `*-hints-seen`, `*-welcome-dismissed`.
+2. Reads `TEST_ONBOARDING_FLAGS` env (JSON array of exact key names) and sets
+   each one to `"true"`.
+
+For app-specific keys not matching default patterns:
+
+```bash
+# In .env.test
+TEST_ONBOARDING_FLAGS=["myapp-tour-v2","myapp-pricing-banner-dismissed"]
+```
+
+Specs that explicitly test the onboarding tour from a fresh state should
+clear these flags themselves at test start (`page.evaluate(() => localStorage.clear())`)
+before navigating.
+
+## Pattern 1 — Supabase Auth (most common SaaS BaaS)
+
+Detected automatically when `SUPABASE_URL` and `SUPABASE_ANON_KEY` env are set.
+Skill skips other auth patterns and uses the Supabase REST endpoint:
+
+```ts
+POST {SUPABASE_URL}/auth/v1/token?grant_type=password
+Headers: { apikey: SUPABASE_ANON_KEY, Content-Type: application/json }
+Body:    { email, password }
+```
+
+Token is stored in localStorage as `sb-<project_ref>-auth-token` (the
+`project_ref` is the subdomain from `SUPABASE_URL`).
+
+**Why polling instead of `Promise.race`:** Supabase clients sometimes rewrite
+the storage key on hydration (refresh-token rotation). The template polls
+localStorage with a 45-second timeout instead of racing a 15s URL-change
+expectation that may never fire (SPA hydrates in place).
+
+```bash
+# .env.test for a Supabase app
+TEST_BASE_URL=https://your-app.example.com
+TEST_USER_EMAIL=qa@example.com
+TEST_USER_PASSWORD=...
+SUPABASE_URL=https://abcdefgh.supabase.co
+SUPABASE_ANON_KEY=eyJhbGc...
+```
+
+OAuth providers configured in Supabase (Google, GitHub) are NOT covered by this
+pattern — they require browser flow. Use a dedicated test user with email/
+password sign-in for CI runs.
+
+## Pattern 2 — API login + JWT (preferred)
 
 For FastAPI, Express, NestJS, Django REST — backends with `/api/auth/login` returning JWT.
 
@@ -81,11 +139,14 @@ If failures look like 401/403 storms, the auth file is the first thing to refres
 
 ```
 TEST_BASE_URL              # required — e.g. https://your-app.example.com
-TEST_USER_EMAIL            # required
-TEST_USER_PASSWORD         # required
-TEST_API_LOGIN_PATH        # optional — default /api/auth/login
-TEST_API_TOKEN_FIELD       # optional — default access_token (also tried: token, jwt)
-TEST_ADMIN_TOKEN           # optional — for Pattern 3
+TEST_USER_EMAIL            # required (unless public-only site)
+TEST_USER_PASSWORD         # required (unless public-only site)
+SUPABASE_URL               # if set → Pattern 1 (Supabase Auth)
+SUPABASE_ANON_KEY          # required with SUPABASE_URL
+TEST_API_LOGIN_PATH        # Pattern 2 — default /api/auth/login
+TEST_API_TOKEN_FIELD       # Pattern 2 — default access_token (also tried: token, jwt)
+TEST_ADMIN_TOKEN           # Pattern 3 — server-issued admin token (Telegram WebApp etc.)
+TEST_ONBOARDING_FLAGS      # JSON array of localStorage keys to flip to "true" post-auth
 TEST_USER_AGENT_KIND       # optional — desktop|mobile|telegram, default desktop
 ```
 

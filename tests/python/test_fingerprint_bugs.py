@@ -46,6 +46,51 @@ def test_severity_from_signals_a11y_serious() -> None:
     assert fb.severity_from_signals(bug) == "S1"
 
 
+def test_severity_override_inline_in_issue_line() -> None:
+    bug = {"issueLine": "[severity:S0] auth completely broken on prod"}
+    assert fb.severity_from_signals(bug) == "S0"
+
+
+def test_severity_override_inline_in_title() -> None:
+    bug = {"title": "[severity:S1] payment fails", "issueLine": "checkout-button broken"}
+    assert fb.severity_from_signals(bug) == "S1"
+
+
+def test_severity_override_from_spec_file_comment() -> None:
+    bug = {"specTitle": "checkout fails", "issueLine": "some non-structured failure"}
+    overrides = {"checkout fails": "S0"}
+    assert fb.severity_from_signals(bug, overrides) == "S0"
+
+
+def test_severity_override_from_spec_file_does_not_affect_unrelated_test() -> None:
+    bug = {"specTitle": "unrelated test", "issueLine": "a11y[moderate] x: y"}
+    overrides = {"checkout fails": "S0"}
+    assert fb.severity_from_signals(bug, overrides) == "S2"  # axe-moderate fallback
+
+
+def test_severity_overrides_from_spec_file_parses_comments(tmp_path: Path) -> None:
+    spec = tmp_path / "x.spec.ts"
+    spec.write_text(
+        "import { test } from '@playwright/test';\n"
+        "test.describe('X', () => {\n"
+        "  // @severity: S0\n"
+        "  test('checkout broken', async () => { });\n"
+        "  test('something fine', async () => { });\n"
+        "  // @severity: S2\n"
+        "  test('minor visual issue', async () => { });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+    overrides = fb.severity_overrides_from_spec_file(spec)
+    assert overrides.get("checkout broken") == "S0"
+    assert overrides.get("minor visual issue") == "S2"
+    assert "something fine" not in overrides
+
+
+def test_severity_overrides_from_missing_file_returns_empty(tmp_path: Path) -> None:
+    assert fb.severity_overrides_from_spec_file(tmp_path / "nope.ts") == {}
+
+
 def test_severity_from_signals_a11y_moderate() -> None:
     bug = {"issueLine": "a11y[moderate] some-rule: ..."}
     assert fb.severity_from_signals(bug) == "S2"

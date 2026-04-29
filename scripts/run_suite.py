@@ -230,6 +230,22 @@ def main(argv: list[str] | None = None) -> int:
 
     rc_norm, _total, _failed = normalize_results(results_path, out_dir / "raw_bugs.json", run_id)
 
+    # Print all artefacts at the end so users don't have to ls the dir
+    print()
+    print("[run_suite] artefacts:")
+    for name, path in [
+        ("raw_bugs.json (skill-normalized)", out_dir / "raw_bugs.json"),
+        ("results.json (Playwright native)", results_path),
+        ("html report dir", out_dir / "html"),
+        ("playwright stdout", out_dir / "playwright-stdout.txt"),
+    ]:
+        if path.exists():
+            print(f"  ✓ {name:36s} {path}")
+    print()
+    print("[run_suite] next steps:")
+    print(f"  python fingerprint_bugs.py --current {out_dir / 'raw_bugs.json'} --out {out_dir / 'bugs.json'} --diff {out_dir / 'diff.json'}")
+    print(f"  python generate_report.py --run-dir {out_dir}")
+
     return rc_pw if not args.skip_run else rc_norm
 
 

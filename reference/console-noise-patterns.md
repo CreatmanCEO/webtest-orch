@@ -28,6 +28,14 @@ script (or pass `--ignore-extra` from the orchestrator) to add app-specific patt
 | `Blocked a frame with origin .* from accessing` | iframe sandbox | Expected in sandboxed iframes |
 | `\[HMR\]`, `\[vite\]`, `\[next\]: hot-update` | Hot module reload | Dev-only |
 | `Permission denied to access property .* on cross-origin` | Cross-origin frame | Expected |
+| `PydanticDeprecatedSince20`, `PydanticUserWarning` | FastAPI / Pydantic v2 backend warnings forwarded to client | Migration nag, not a runtime bug |
+| `[Turbopack] compiled\|building\|HMR` | Next.js 15 + Turbopack dev | Compile signals — dev-only |
+| `[next-auth][debug]` | next-auth debug mode | Dev-only when `NEXTAUTH_DEBUG=true` |
+| `[Fast Refresh]`, `fast-refresh` | Next.js HMR | Dev-only |
+| `[Supabase].*realtime`, `supabase.*subscribe` | Supabase realtime client | Channel subscription chatter |
+| `chrome-extension://`, `moz-extension://` | Browser extensions | Not the app; ignore |
+| `ResizeObserver loop limit exceeded` | Chromium quirk | Browser implementation detail, not the app |
+| `AbortError: signal is aborted` | React unmount during fetch | Cleanup race, not user-visible |
 
 ## Bug patterns (auto-report with severity)
 

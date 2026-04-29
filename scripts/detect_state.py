@@ -47,7 +47,19 @@ def _detect_listening_ports() -> list[int]:
 
 
 def _detect_skill_dir() -> str | None:
-    return os.environ.get("CLAUDE_SKILL_DIR") or None
+    """Resolve the skill's own directory.
+
+    Priority:
+    1. `CLAUDE_SKILL_DIR` env var (set by Claude Code at skill-load)
+    2. `__file__`'s parent's parent (the script lives at `<skill_dir>/scripts/<this>.py`)
+    """
+    env = os.environ.get("CLAUDE_SKILL_DIR")
+    if env:
+        return env
+    try:
+        return str(Path(__file__).resolve().parent.parent)
+    except (OSError, ValueError):
+        return None
 
 
 def _isolation_verified(skill_dir: str | None) -> bool:

@@ -23,11 +23,25 @@ End-to-end testing orchestrator for web applications. Splits into **first-run ex
 
 ## Image budget protection — READ FIRST, MANDATORY
 
-**The problem:** screenshots burn Claude Code's parent-chat **image cap** (~50–100 inline image blocks per session) before they burn its text context. Standalone Playwright MCP usage hits this wall fast. Once hit, the user must `/compact` even at 20% text-context usage.
+**The problem:** Claude Code has two independent context limits — text tokens (large)
+and **inline-image blocks** (~50–100 per session). Screenshots returned inline burn
+the image budget far faster than the text budget; once exhausted, the user must
+`/compact` even at 20% text-context usage.
+
+**Distinction that matters:**
+- ❌ **Inline image returns to parent context** burn the budget. This includes
+  `browser_take_screenshot` default output (image returned to caller),
+  `Read` on a `.png/.jpg/.webp/.gif/.bmp/.svg`, markdown report with `![]()` shown
+  to parent.
+- ✅ **On-disk artefacts that nobody Reads** are FREE. Playwright's failure
+  screenshots go to `test-results/`, MCP browser tools may save `.png`s to a
+  cache dir — none of these cost the parent context UNLESS you `Read` them.
 
 **The hard rule, enforced by you (not by frontmatter):**
 
-> **NEVER call `Playwright:browser_take_screenshot`, `chrome-devtools:take_screenshot`, or `Read` on `.png/.jpg/.webp` files from the parent skill context. ALWAYS dispatch a Task subagent (general-purpose) to do anything that produces or consumes images. Subagent returns ONLY text — paths, descriptions, verdicts.**
+> **NEVER return screenshots to the parent skill context. ALWAYS dispatch a Task
+> subagent (general-purpose) for anything that produces or consumes images.
+> Subagent returns ONLY text — paths, descriptions, verdicts.**
 
 This contract was attempted via `context: fork` frontmatter but Claude Code 2.1.x on Windows does not honor that field, so enforcement is delegated to *you reading these instructions*. Verified empirically 2026-04-28 (sub-agent isolation works; `context: fork` does not parse). See `${CLAUDE_SKILL_DIR}/.isolation-verified`.
 
@@ -101,12 +115,33 @@ Copy this checklist into TodoWrite at session start; tick as you go.
    - First run → minimal critical-path: home + auth + one main flow
 - [ ] **4. Dev server up.** `python "${CLAUDE_SKILL_DIR}/scripts/with_server.py" --help`. Use it; **do not read its source unless `--help` doesn't cover the case.**
 - [ ] **5a. EXPLORATORY** (BOOTSTRAP / new flow in HYBRID): use **Playwright MCP** with `Playwright:browser_snapshot` (ARIA tree, text). Walk the flow, generate POM in `tests/pages/<Page>.ts`, generate spec in `tests/specs/<flow>.spec.ts`. **Generate locators from ARIA tree refs you actually saw** — do NOT use generic regex like `getByPlaceholder(/john doe|name|имя/i)`, they cause strict-mode violations on first run. Either use exact strings from the snapshot OR add `.first()` explicitly. Run the spec once to confirm green.
+
+  **🔴 SPEC GENERATION CONTRACT — non-negotiable.** Even if you skip the template
+  and write a spec from scratch (when product context is rich), every generated
+  `*.spec.ts` MUST contain ALL of these:
+   1. **Console listeners attached BEFORE `page.goto()`**: `consoleErrors[]` from
+      `page.on('pageerror')` and `page.on('console', m => m.type() === 'error')`.
+   2. **Network listeners attached BEFORE `page.goto()`**: `failedRequests[]` from
+      `page.on('response', r => r.status() >= 400 && ...)` and `page.on('requestfailed')`.
+   3. **`AxeBuilder` scan** with `withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa'])`
+      whose violations are pushed into `issues[]`.
+   4. **`issues[]` collector pattern** — every soft check pushes a structured tag
+      into `issues` (e.g. `a11y[serious] color-contrast: ...`, `heading-jump: ...`,
+      `touch-target: ...`, `overflow: ...`, `html-lang: ...`).
+   5. **Single hard `expect(issues).toEqual([])`** at the end with
+      `${count} issues found:\n  - ...` message format so `run_suite.py` can split
+      one test failure into one bug record per issue.
+   6. **Trailing `expect(consoleErrors).toEqual([])` + `expect(failedRequests).toEqual([])`**.
+
+  Skip ANY of these and the skill's console-audit / a11y / per-issue fingerprinting
+  features stop working. Use `templates/spec.ts.tmpl` as the canonical reference —
+  copy its skeleton into hand-written specs.
 - [ ] **5b. REPLAY**: `npx playwright test --reporter=list,json,html`. **No Playwright MCP, no LLM browser actions.**
 - [ ] **6. A11y** on each visited page: deterministic `@axe-core/playwright` (in spec) + qualitative checks via nested subagent if alt-text/heading/focus suspect. See `reference/a11y-patterns.md`.
 - [ ] **7. Console + network.** Listeners attach BEFORE `page.goto()` (mandatory). Pipe captured logs through `python "${CLAUDE_SKILL_DIR}/scripts/triage_console.py" --help`.
 - [ ] **8. Visual.** Default `toHaveScreenshot()` in spec. Diff fired → `python "${CLAUDE_SKILL_DIR}/scripts/visual_diff.py" --classify` spawns nested subagent on each failed image (text verdict only). Argos opt-in via `VISUAL_DIFF=argos`.
 - [ ] **9. Fingerprint + diff.** `python "${CLAUDE_SKILL_DIR}/scripts/fingerprint_bugs.py" --current reports/<curr>/raw.json --previous reports/<prev>/bugs.json --out reports/<curr>/bugs.json`.
-- [ ] **10. Report.** `python "${CLAUDE_SKILL_DIR}/scripts/generate_report.py" --bugs bugs.json --diff diff.json --out reports/<run-id>`. Print absolute path to `index.html`.
+- [ ] **10. Report.** `python "${CLAUDE_SKILL_DIR}/scripts/generate_report.py" --run-dir reports/<run-id> [--app-name "My App"]`. Reads `bugs.json` + `diff.json` from that dir, writes `report.md` + `index.html` next to them. Print absolute path to `index.html`.
 
 ## Decision tree
 
@@ -155,7 +190,7 @@ detect_state.py → JSON
 - `scripts/triage_console.py --input console.json` — noise filter + LLM long tail
 - `scripts/visual_diff.py --classify reports/<run-id>` — pixel diff + nested-subagent classification
 - `scripts/fingerprint_bugs.py --current curr.json --previous prev.json` — bug dedup + diff
-- `scripts/generate_report.py --bugs bugs.json --diff diff.json --out reports/<run-id>` — markdown + html
+- `scripts/generate_report.py --run-dir reports/<run-id> [--app-name "X"]` — markdown + html (reads bugs.json/diff.json from --run-dir)
 - `scripts/_image_isolation_check.py --verify` — image budget contract self-check
 
 ## When to dispatch a Task subagent

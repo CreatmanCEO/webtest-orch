@@ -44,6 +44,23 @@ DEFAULT_NOISE = [
     (r"\[HMR\]|\[vite\]|\[next\]: hot-update", "hmr", "noise"),
     (r"Permission denied to access property .* on cross-origin", "x-origin-perm", "noise"),
     (r"Cookie ['\"].*['\"] has been rejected for invalid domain", "cookie-domain", "warn"),
+    # Backend Pydantic warnings forwarded via streaming responses (FastAPI logs in console)
+    (r"PydanticDeprecatedSince20|PydanticUserWarning", "pydantic-warning", "noise"),
+    (r"DeprecationWarning: .*Pydantic", "pydantic-warning", "noise"),
+    # Next.js 15 + Turbopack dev signals
+    (r"\[Turbopack\] (compiled|building|HMR)", "next15-turbopack", "noise"),
+    (r"\[next-auth\]\[debug\]", "next-auth-debug", "noise"),
+    (r"\[Fast Refresh\]|fast-refresh", "next-fast-refresh", "noise"),
+    # Supabase realtime client noise
+    (r"\[Supabase\].*realtime|supabase.*subscribe", "supabase-realtime-debug", "noise"),
+    # Browser-extension injection (common on dev machines, not the app)
+    (r"chrome-extension://|moz-extension://", "browser-extension", "noise"),
+    # ResizeObserver loop limit (chromium quirk, not a real bug)
+    (r"ResizeObserver loop (limit exceeded|completed with undelivered notifications)",
+     "resizeobserver-loop", "noise"),
+    # AbortError from fetch unmount races
+    (r"AbortError: signal is aborted|The user aborted a request",
+     "abort-on-unmount", "noise"),
 ]
 
 # Real-bug categories — listeners report these as plain text

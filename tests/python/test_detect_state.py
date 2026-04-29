@@ -83,3 +83,19 @@ def test_credentials_source_project_when_env_test_present(tmp_path: Path) -> Non
     (tmp_path / ".env.test").write_text("TEST_BASE_URL=https://x")
     state = detect_state.collect(tmp_path)
     assert state["credentials"]["credentialsSource"] == "project"
+
+
+def test_skill_dir_resolved_from_file_when_env_unset(monkeypatch, tmp_path: Path) -> None:
+    """SK-02 fix: skillDir must be populated even when CLAUDE_SKILL_DIR is not set."""
+    monkeypatch.delenv("CLAUDE_SKILL_DIR", raising=False)
+    state = detect_state.collect(tmp_path)
+    # Script lives at <skill_dir>/scripts/detect_state.py — skillDir should resolve
+    assert state["skillDir"] is not None
+    assert "scripts" not in state["skillDir"]  # parent of scripts dir
+    assert Path(state["skillDir"]).is_dir()
+
+
+def test_skill_dir_uses_env_when_set(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("CLAUDE_SKILL_DIR", str(tmp_path))
+    state = detect_state.collect(tmp_path)
+    assert state["skillDir"] == str(tmp_path)

@@ -66,7 +66,12 @@ For admin panels with bot-token auth: store the bot token in `.env.test` and inj
 
 ## WebSocket / SSE flows (real-time chat, voice)
 
-Listen on `page.on('websocket')`:
+There are **two strategies**, pick the right one for your app:
+
+### Strategy A — `page.on('websocket')` frame inspection
+
+Use this when WS frames carry text JSON you can read and the app doesn't encrypt
+the payload at the application layer:
 
 ```ts
 const wsLog: string[] = [];
@@ -77,14 +82,37 @@ page.on('websocket', (ws) => {
 });
 ```
 
-**Don't fail on connection-close events during navigation** — they're normal. Filter in assertions:
+Don't fail on `WS closed` during navigation — that's normal SPA teardown.
+Filter in assertions: `wsLog.filter(l => !l.includes('WS closed'))`.
+
+### Strategy B — DOM-mutation fallback (when WS frames are not informative)
+
+Many real-world chat apps:
+- Send binary frames (Protocol Buffers, MessagePack)
+- Encrypt payloads at the app layer (E2EE chat, SDP signalling)
+- Use proprietary framing where partial JSON is meaningless mid-stream
+
+In these cases, **don't try to parse WS frames — assert on DOM mutations instead.**
+The user-visible state is what changes when a message arrives:
 
 ```ts
-const realErrors = wsLog.filter(l => !l.includes('WS closed'));
-expect(realErrors.length).toBeGreaterThan(0); // we expected some traffic
+test('companion replies after user message', async ({ page }) => {
+  await page.goto('/');
+  await page.getByPlaceholder(/type a message/i).fill('hello');
+  await page.keyboard.press('Enter');
+
+  // Wait for the reply bubble to appear in the DOM, not for a specific WS frame
+  const reply = page.getByTestId('message-bubble').filter({ hasText: /\w+/ }).nth(1);
+  await expect(reply).toBeVisible({ timeout: 30_000 });
+  await expect(reply).not.toBeEmpty();
+});
 ```
 
-SSE responses come through normally on `page.on('response')` — check `content-type: text/event-stream`.
+Use Strategy B by default for chat / voice / TTS UIs. Only switch to A when
+you need fine-grained protocol-level assertions.
+
+SSE responses come through normally on `page.on('response')` — check
+`content-type: text/event-stream`.
 
 ## TTS / STT (canvas, Web Audio API)
 
