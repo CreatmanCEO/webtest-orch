@@ -94,11 +94,20 @@ jobs:
         working-directory: tests/fixtures/demo-app
         run: |
           mkdir -p reports/run-ci
-          npx playwright test --project chromium-mobile --reporter=json,list \
+          # Trust config reporters (list + json with outputFile + html); don't override
+          npx playwright test --project chromium-mobile \
               > reports/run-ci/playwright-stdout.txt 2>&1 || true
-          # Move Playwright's results.json into the run dir
-          cp test-results/results.json reports/run-ci/results.json || \
+          ls -la test-results/ playwright-report/ 2>&1 || true
+          # Find results.json wherever Playwright wrote it
+          if [ -f test-results/results.json ]; then
+            cp test-results/results.json reports/run-ci/results.json
+          elif [ -f playwright-report/results.json ]; then
             cp playwright-report/results.json reports/run-ci/results.json
+          else
+            echo "ERROR: Playwright did not write results.json"
+            cat reports/run-ci/playwright-stdout.txt
+            exit 1
+          fi
           python ../../../scripts/run_suite.py --cwd . --out reports/run-ci --skip-run
           python ../../../scripts/fingerprint_bugs.py \
             --current reports/run-ci/raw_bugs.json \
