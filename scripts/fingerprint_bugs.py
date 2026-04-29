@@ -25,7 +25,7 @@ from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -163,9 +163,11 @@ def compute_fingerprint(bug: dict) -> str:
 
     # Issue line is most discriminating when present (one bug per issue)
     if issue_line:
-        # Normalize: strip variable counts like "(3× nodes)" → ""
-        normalized_issue = re.sub(r"\(\d+× nodes\)", "", issue_line)
-        normalized_issue = re.sub(r"\d+x\d+", "WxH", normalized_issue)  # strip viewport sizes
+        # Strip variable node counts: "(3x nodes)" or "(10× nodes)" → ""
+        normalized_issue = re.sub(r"\s*\(\d+\s*[x×]\s*nodes\)", "", issue_line)
+        # Strip viewport sizes "390x844" → "WxH" so the same bug across
+        # viewports collapses to one fingerprint
+        normalized_issue = re.sub(r"\d+x\d+", "WxH", normalized_issue)
         composite = f"{spec_file}|{normalized_issue}"
     else:
         composite = f"{selector}|{assertion}|{error_class}|{url_path}|{msg[:80]}|{spec_file}"

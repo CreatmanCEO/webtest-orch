@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel previous runs on the same branch when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check scripts/ tests/
+      - name: Mypy
+        run: mypy scripts/
+
+  test:
+    name: Pytest (${{ matrix.os }} / py${{ matrix.python-version }})
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+        # Trim matrix — keep ubuntu fully tested, others only on 3.12
+        exclude:
+          - os: macos-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.10"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Pytest with coverage
+        run: pytest --cov=scripts --cov-report=term --cov-report=xml -q
+      - name: Upload coverage (Linux py3.12 only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  smoke-e2e:
+    name: E2E smoke (Linux)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Bootstrap demo project
+        working-directory: tests/fixtures/demo-app
+        run: |
+          npm init -y >/dev/null
+          npm install --silent --save-dev @playwright/test @axe-core/playwright dotenv
+          npx playwright install --with-deps chromium
+      - name: Serve demo HTML
+        run: |
+          cd tests/fixtures/demo-app
+          python3 -m http.server 8765 &
+          echo $! > /tmp/server.pid
+          sleep 1
+          curl -fsS http://127.0.0.1:8765/ >/dev/null
+      - name: Run skill pipeline against demo
+        working-directory: tests/fixtures/demo-app
+        run: |
+          mkdir -p reports/run-ci
+          npx playwright test --project chromium-mobile --reporter=json,list \
+              > reports/run-ci/playwright-stdout.txt 2>&1 || true
+          # Move Playwright's results.json into the run dir
+          cp test-results/results.json reports/run-ci/results.json || \
+            cp playwright-report/results.json reports/run-ci/results.json
+          python ../../../scripts/run_suite.py --cwd . --out reports/run-ci --skip-run
+          python ../../../scripts/fingerprint_bugs.py \
+            --current reports/run-ci/raw_bugs.json \
+            --out reports/run-ci/bugs.json \
+            --diff reports/run-ci/diff.json
+          python ../../../scripts/generate_report.py \
+            --run-dir reports/run-ci --app-name "Demo App"
+      - name: Verify report artefacts exist
+        working-directory: tests/fixtures/demo-app
+        run: |
+          test -f reports/run-ci/bugs.json
+          test -f reports/run-ci/diff.json
+          test -f reports/run-ci/report.md
+          test -f reports/run-ci/index.html
+          echo "--- report.md preview ---"
+          head -40 reports/run-ci/report.md
+      - name: Upload run artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-e2e-run
+          path: tests/fixtures/demo-app/reports/run-ci/
+          if-no-files-found: warn
+      - name: Stop demo server
+        if: always()
+        run: kill $(cat /tmp/server.pid) || true

@@ -24,7 +24,7 @@ from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -40,7 +40,7 @@ def parse_verdict(text: str) -> dict:
     if not text:
         return {"valid": False, "reason": "empty input"}
     # Take first non-empty line
-    lines = [l for l in text.splitlines() if l.strip()]
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     if not lines:
         return {"valid": False, "reason": "no non-empty lines"}
     first = lines[0].strip()

@@ -23,7 +23,7 @@ from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -82,20 +82,30 @@ def classify(text: str, noise_pats, bug_pats) -> dict:
 
 
 def triage(messages: list, noise_pats, bug_pats) -> dict:
-    out = {"ignored": [], "reported": [], "needsLlm": [], "stats": {}}
+    ignored: list = []
+    reported: list = []
+    needs_llm: list = []
     for msg in messages:
         text = msg if isinstance(msg, str) else (msg.get("text") or msg.get("message") or "")
         cls = classify(text, noise_pats, bug_pats)
         record = {**(msg if isinstance(msg, dict) else {"text": text}), **cls}
-        bucket = {"ignore": "ignored", "report": "reported", "needs-llm": "needsLlm"}[cls["decision"]]
-        out[bucket].append(record)
-    out["stats"] = {
-        "total": len(messages),
-        "ignored": len(out["ignored"]),
-        "reported": len(out["reported"]),
-        "needsLlm": len(out["needsLlm"]),
+        if cls["decision"] == "ignore":
+            ignored.append(record)
+        elif cls["decision"] == "report":
+            reported.append(record)
+        else:
+            needs_llm.append(record)
+    return {
+        "ignored": ignored,
+        "reported": reported,
+        "needsLlm": needs_llm,
+        "stats": {
+            "total": len(messages),
+            "ignored": len(ignored),
+            "reported": len(reported),
+            "needsLlm": len(needs_llm),
+        },
     }
-    return out
 
 
 def main(argv: list[str] | None = None) -> int:

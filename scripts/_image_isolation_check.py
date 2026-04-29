@@ -27,7 +27,7 @@ from pathlib import Path
 # em-dashes don't crash with UnicodeEncodeError. No-op on Linux/macOS.
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -88,7 +88,7 @@ def gen_fixtures() -> int:
     print(f"[image_isolation_check] fixtures written to {fdir}")
     print("Next step: dispatch a Task subagent (general-purpose) with this prompt:")
     print("---")
-    print(f"Read these 3 files with Read and return one short text description per file:")
+    print("Read these 3 files with Read and return one short text description per file:")
     for name in FIXTURE_NAMES:
         print(f"  {fdir / name}")
     print("Output 3 lines, no preamble, no inline images.")

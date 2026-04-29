@@ -30,13 +30,12 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Optional
 
 # Windows stdout often defaults to cp1252; force UTF-8 so Cyrillic paths and
 # em-dashes don't crash with UnicodeEncodeError. No-op on Linux/macOS.
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -60,7 +59,7 @@ def _wait_for_port(port: int, timeout_s: float, label: str) -> bool:
     return False
 
 
-def _spawn(command: str, cwd: Optional[str], extra_env: dict[str, str], label: str) -> subprocess.Popen:
+def _spawn(command: str, cwd: str | None, extra_env: dict[str, str], label: str) -> subprocess.Popen:
     print(f"[with_server] starting {label}: {command}", file=sys.stderr)
     env = os.environ.copy()
     env.update(extra_env)
@@ -81,7 +80,7 @@ def _spawn(command: str, cwd: Optional[str], extra_env: dict[str, str], label: s
             env=env,
             stdout=sys.stderr,
             stderr=sys.stderr,
-            preexec_fn=os.setsid,
+            preexec_fn=os.setsid,  # type: ignore[attr-defined, unused-ignore]  # POSIX only
         )
     return proc
 
@@ -92,9 +91,9 @@ def _terminate(proc: subprocess.Popen, label: str, grace_s: float = 5.0) -> None
     print(f"[with_server] terminating {label} (pid {proc.pid})", file=sys.stderr)
     try:
         if os.name == "nt":
-            proc.send_signal(signal.CTRL_BREAK_EVENT)
+            proc.send_signal(signal.CTRL_BREAK_EVENT)  # type: ignore[attr-defined, unused-ignore]
         else:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)  # type: ignore[attr-defined, unused-ignore]
     except (ProcessLookupError, OSError):
         pass
     try:
@@ -105,7 +104,7 @@ def _terminate(proc: subprocess.Popen, label: str, grace_s: float = 5.0) -> None
             if os.name == "nt":
                 proc.kill()
             else:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)  # type: ignore[attr-defined, unused-ignore]
         except (ProcessLookupError, OSError):
             pass
 

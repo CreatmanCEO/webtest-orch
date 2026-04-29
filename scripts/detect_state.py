@@ -25,7 +25,7 @@ from typing import Any
 # em-dashes don't crash with UnicodeEncodeError. No-op on Linux/macOS.
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 

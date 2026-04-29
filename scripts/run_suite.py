@@ -23,7 +23,7 @@ from pathlib import Path
 
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(encoding="utf-8")
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except (AttributeError, ValueError):
         pass
 
@@ -165,7 +165,7 @@ def normalize_results(results_path: Path, out_path: Path, run_id: str) -> tuple[
         print(f"[run_suite] missing {results_path}", file=sys.stderr)
         return 1, 0, 0
 
-    with open(results_path, "r", encoding="utf-8") as f:
+    with open(results_path, encoding="utf-8") as f:
         results = json.load(f)
 
     bugs: list = []
@@ -228,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
                 shutil.copy2(cand, results_path)
                 break
 
-    rc_norm, total, failed = normalize_results(results_path, out_dir / "raw_bugs.json", run_id)
+    rc_norm, _total, _failed = normalize_results(results_path, out_dir / "raw_bugs.json", run_id)
 
     return rc_pw if not args.skip_run else rc_norm
 

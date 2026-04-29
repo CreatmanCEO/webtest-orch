@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo App — webtest-orch fixture</title>
+  <style>
+    body { font: 16px/1.5 sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; color: #222; }
+    h1 { margin-bottom: 0.5em; }
+    nav a { margin-right: 1em; }
+    /* Intentional bug: low-contrast text for axe to flag */
+    .low-contrast { color: #aaa; background: #ddd; }
+    /* Intentional bug: small touch target */
+    .tiny-btn { width: 18px; height: 18px; border: 1px solid #555; background: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Demo App</h1>
+    <nav>
+      <a href="./projects.html">Projects</a>
+      <a href="./about.html">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Welcome</h2>
+    <p>This page is intentionally littered with small a11y bugs so that the
+       webtest-orch e2e smoke test in CI has something to find.</p>
+
+    <p class="low-contrast">This text has low contrast (axe should flag it).</p>
+
+    <button class="tiny-btn" aria-label="Tiny action">x</button>
+
+    <p>Below is a heading hierarchy bug — h2 jumps directly to h4:</p>
+    <h4>Skipped a level</h4>
+  </main>
+
+  <footer>
+    <p>Generated as a test fixture for webtest-orch CI.</p>
+  </footer>
+</body>
+</html>

@@ -1,6 +1,13 @@
-# webapp-test-orchestrator
+# webtest-orch — webapp-test-orchestrator
+
+[![CI](https://github.com/CreatmanCEO/webtest-orch/actions/workflows/ci.yml/badge.svg)](https://github.com/CreatmanCEO/webtest-orch/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta-orange.svg)](./CHANGELOG.md)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
 **Universal e2e testing skill for Claude Code.** Заменяет ad-hoc промпты с Playwright MCP на одну переиспользуемую сущность для тестирования любого web-приложения (Next.js, FastAPI, статика, Telegram WebApp, и т.д.).
+
+> ⚠️ **Public beta (`0.1.0-beta`)** — looking for early feedback, especially OS-compatibility reports. See [issue templates](.github/ISSUE_TEMPLATE/).
 
 ---
 
