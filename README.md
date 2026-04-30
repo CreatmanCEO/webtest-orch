@@ -1,234 +1,245 @@
 # webtest-orch
 
 [![CI](https://github.com/CreatmanCEO/webtest-orch/actions/workflows/ci.yml/badge.svg)](https://github.com/CreatmanCEO/webtest-orch/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0--beta-orange.svg)](./CHANGELOG.md)
-[![npm](https://img.shields.io/npm/v/webtest-orch/beta?label=npm%40beta)](https://www.npmjs.com/package/webtest-orch)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/webtest-orch/beta?label=npm%40beta&color=cb3837)](https://www.npmjs.com/package/webtest-orch)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Node 18+](https://img.shields.io/badge/node-18%2B-339933.svg)](https://nodejs.org)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Opus%204.7%20%C2%B7%201M%20context-cc785c)](https://code.claude.com)
 
-**Universal e2e testing skill for Claude Code.** Заменяет ad-hoc промпты с Playwright MCP на одну переиспользуемую сущность для тестирования любого web-приложения (Next.js, FastAPI, статика, Telegram WebApp, и т.д.).
+🇬🇧 English · [🇷🇺 Русский](README.ru.md)
 
-> ⚠️ **Public beta (`0.1.0-beta`)** — looking for early feedback, especially OS-compatibility reports. See [issue templates](.github/ISSUE_TEMPLATE/).
+**A Claude Code skill that automates end-to-end testing for any web app — and respects Claude's invisible inline-image budget so your `/compact` doesn't fire on screenshot 51.**
 
----
-
-## Зачем
-
-| До skill | После skill |
-|---|---|
-| Каждый раз пишешь длинный промпт «протестируй login на app, проверь a11y, console errors, мобильный viewport» | Говоришь **«test the app»** — skill сам решает что делать |
-| Каждый screenshot Playwright MCP уходит в parent чат → image cap забивается на ~50–100 → `/compact` при низком расходе текста | Скриншоты остаются в Task subagent, parent видит только текст |
-| Первый прогон exploratory (LLM-heavy), второй прогон — снова с нуля | Первый прогон генерирует `*.spec.ts`, второй — `npx playwright test` без LLM (~$0) |
-| Bugs теряются между прогонами | Composite fingerprint + run diff → `new`/`regression`/`persisting`/`fixed` |
+> First run: LLM-driven exploration via Playwright MCP, ARIA-tree-first, generates `*.spec.ts`. Subsequent runs: deterministic `npx playwright test`, ~zero LLM tokens. Bug fingerprinting diffs runs (new / regression / persisting / fixed). Linear / GitHub / Jira tracker mappings out of the box.
 
 ---
 
-## Когда skill активируется
+## Why this exists
 
-Скажи в Claude Code что-то вроде:
+Claude Code has **two independent context limits**: text tokens (large) and inline-image blocks (~50–100 per session). The image budget is invisible — you don't see a counter, you just hit a wall and have to `/compact` even when text-context is at 20%. Standalone Playwright MCP burns through it in under an hour because every screenshot returned to the parent context is one image-budget block.
 
-- «test the app»
-- «протестируй приложение»
-- «run e2e»
-- «smoke test»
-- «check the login flow»
-- «audit accessibility»
-- «test responsive»
-- «find bugs in https://your-app.example.com»
+**This skill makes the image-budget cost zero.** All browser work runs inside Task subagents; the parent chat receives only text — paths, descriptions, verdicts. Pixel-diff regression returns `pass/fail + diff%` as plain text. Vision classification of a single failed screenshot is delegated to one nested subagent that reads the image inside its own context and returns one line.
 
-Skill сработает автоматически — даже если ты не упомянул Playwright или Claude Code.
+The other half of the skill is the orchestration layer over the 2026 LLM-driven testing stack — Playwright MCP for exploration, Playwright CLI for replay, axe-core for the deterministic 57% of WCAG, and a deterministic console-noise classifier so the LLM is only invoked on messages that aren't already in a pattern table.
 
-Также есть slash-команда: **`/test-app`** (alias через frontmatter `trigger`).
+> Validated end-to-end on two production apps: a static Next.js portfolio (4 real bugs found, 0 false positives) and a Supabase + FastAPI + WebSocket SaaS chat (10/10 generated specs ran green after 4 iterations, ~12 min wall-clock).
 
 ---
 
-## Установка (один раз)
+## How it works — three phases, one budget invariant
 
-### Быстрая установка через npm
+```mermaid
+graph TB
+    User["You<br/>(test the app)"]
+    Skill["webtest-orch skill<br/>parent chat context"]
+    Probe["scripts/detect_state.py<br/>BOOTSTRAP · REPLAY · HYBRID"]
+    Sub["Task subagent<br/>image-isolated"]
+    Tools["Playwright MCP<br/>browser_snapshot ARIA tree"]
+    Spec["tests/specs/*.spec.ts<br/>issues[] collector pattern"]
+    Replay["npx playwright test<br/>~zero LLM cost"]
+    Norm["scripts/run_suite.py<br/>raw_bugs.json"]
+    FP["scripts/fingerprint_bugs.py<br/>SHA-256 · severity · diff"]
+    Report["scripts/generate_report.py<br/>report.md · index.html"]
+
+    User --> Skill
+    Skill --> Probe
+    Probe -->|"first run"| Sub
+    Sub --> Tools
+    Tools -->|"ARIA text — no images to parent"| Sub
+    Sub --> Spec
+    Probe -->|"subsequent runs"| Replay
+    Spec --> Replay
+    Replay --> Norm
+    Norm --> FP
+    FP --> Report
+
+    classDef budget fill:#fee,stroke:#c44
+    classDef cheap fill:#efe,stroke:#4c4
+    class Sub budget
+    class Replay,Norm,FP,Report cheap
+```
+
+| Phase | What happens | Image budget cost |
+|---|---|---|
+| **State probe** | `detect_state.py` reads `tests/`, `playwright.config.ts`, `.env.test`, listening ports → JSON → mode hint (BOOTSTRAP / REPLAY / HYBRID) | 0 |
+| **BOOTSTRAP exploratory** (first run) | Task subagent uses Playwright MCP `browser_snapshot` (ARIA tree, text). Walks login / chat / settings / logout. Generates POMs + `tests/specs/*.spec.ts`. | 0 in parent (subagent isolated) |
+| **REPLAY** (subsequent runs) | `npx playwright test` directly. Console listeners, axe-core, `toHaveScreenshot` — all run in spec, return text. | 0 |
+| **Vision classification** (only when `toHaveScreenshot` fires) | Nested Task subagent reads ONE image, returns `<verdict>: <reason>` line | 0 in parent, 1 per subagent (max 3-5/run) |
+| **Fingerprint + diff** | Composite SHA-256 of `(selector \| assertion \| error class \| URL template \| message)`. Diff state: `new` / `regression` / `persisting` / `fixed`. | 0 |
+| **Report** | `report.md` + self-contained `index.html` + `bugs.json` with Linear / GitHub / Jira mappings | 0 |
+
+The image-budget invariant is non-negotiable. Any code path that returns a screenshot inline to the parent chat is a bug.
+
+---
+
+## What you actually get
+
+```
+~/.claude/skills/webtest-orch/
+├── SKILL.md                            # workflow for Claude Code (~250 lines)
+├── README.md, CHANGELOG.md, LICENSE    # human-facing docs
+├── install.sh                          # bash installer (alternative to npm)
+├── bin/webtest-orch.js                 # CLI: install / status / uninstall
+├── scripts/
+│   ├── detect_state.py                 # JSON state probe + mode hint
+│   ├── with_server.py                  # dev-server lifecycle (front + back)
+│   ├── run_suite.py                    # wraps `playwright test`, normalizes JSON,
+│   │                                   #  splits issues[] collector into per-issue bug records
+│   ├── fingerprint_bugs.py             # SHA-256 fingerprints, severity heuristics,
+│   │                                   #  Linear/GitHub/Jira tracker mappings, run diff
+│   ├── triage_console.py               # default ignore-list for GTM/Stripe/Pydantic/
+│   │                                   #  Next.js Turbopack/Supabase realtime/etc.
+│   ├── visual_diff.py                  # locates toHaveScreenshot failures,
+│   │                                   #  prepares vision-classification tasks
+│   ├── vision_classify.py              # validates `<verdict>: <reason>` from subagent
+│   ├── generate_report.py              # report.md + self-contained index.html + diff
+│   ├── preflight.py                    # base-URL HEAD check + auth env validation
+│   └── _image_isolation_check.py       # self-test for the budget invariant
+├── reference/                          # loaded on-demand, not at activation
+│   ├── playwright-patterns.md          # locator priority, anti-flake, tabs-vs-buttons
+│   ├── auth-strategies.md              # Supabase · custom JWT · UI fallback · onboarding flags
+│   ├── a11y-patterns.md                # axe + qualitative review via nested subagent
+│   ├── responsive-checklist.md         # viewports, touch targets, overflow detection
+│   ├── console-noise-patterns.md       # ignore-list patterns + bug-classifier table
+│   ├── stack-specific.md               # Next.js · FastAPI · Telegram WebApp · WS/SSE · TTS
+│   └── reporting.md                    # bugs.json schema · severity mapping · tracker integrations
+├── templates/
+│   ├── playwright.config.ts.tmpl       # with auth (setup project + storageState)
+│   ├── playwright.config.public.ts.tmpl # no-auth variant
+│   ├── auth.setup.ts.tmpl              # Supabase → custom JWT → UI fallback chain
+│   ├── fixture.ts.tmpl, pom.ts.tmpl    # POM + fixture skeletons
+│   └── spec.ts.tmpl                    # canonical issues[] collector pattern
+└── examples/
+    ├── public-landing.spec.ts          # static site (no auth)
+    ├── authed-dashboard.spec.ts        # POM + storageState
+    └── telegram-webapp.spec.ts         # mocked window.Telegram.WebApp
+```
+
+---
+
+## Quick Start (3 minutes)
+
+### 1. Install the skill
 
 ```bash
 npx webtest-orch@beta install
 ```
 
-Скопирует skill в `~/.claude/skills/webtest-orch/` и подскажет команды для установки нужных MCP-серверов, если их нет.
+This copies the skill into `~/.claude/skills/webtest-orch/` and checks for the required MCP servers.
 
-После установки:
+### 2. Add the MCP servers (if the installer reports them missing)
 
 ```bash
-# Если CLI пишет что MCPs не установлены — выполни:
 claude mcp add --scope user playwright npx @playwright/mcp@latest
 claude mcp add --scope user chrome-devtools npx chrome-devtools-mcp@latest
-
-# Перезапусти Claude Code (skills загружаются при старте сессии)
 ```
 
-В Claude Code сказать «test the app» или `/test-app` — должен активироваться `webtest-orch` и показать таблицу `Project state` со статусом проекта.
+### 3. Restart Claude Code
 
-### Альтернативная установка из репозитория
+Skills are loaded at session start.
 
-```bash
-git clone https://github.com/CreatmanCEO/webtest-orch.git
-cd webtest-orch
-bash install.sh                # копия в ~/.claude/skills/webtest-orch/
-# или для разработки:
-bash install.sh --symlink      # symlink (Linux/macOS; Windows нужен Developer Mode)
-```
+### 4. Add `.env.test` to your project
 
-### CLI commands
-
-```bash
-npx webtest-orch help              # все команды
-npx webtest-orch status            # где установлен skill + MCPs
-npx webtest-orch install --symlink # для разработки skill локально
-npx webtest-orch uninstall         # удалить установленный skill
-```
-
----
-
-## Использование в новом проекте
-
-### Минимум — `.env.test` в корне проекта
+For an authenticated SaaS (Supabase example):
 
 ```bash
 TEST_BASE_URL=https://your-app.example.com
-TEST_USER_EMAIL=test@example.com
-TEST_USER_PASSWORD=your-password
+TEST_USER_EMAIL=qa@example.com
+TEST_USER_PASSWORD=...
+SUPABASE_URL=https://abcdefgh.supabase.co
+SUPABASE_ANON_KEY=eyJhbGc...
 ```
 
-Optional:
+For a public site:
 
 ```bash
-TEST_API_LOGIN_PATH=/api/auth/login    # default
-TEST_API_TOKEN_FIELD=access_token      # default — JSON-поле с JWT
+TEST_BASE_URL=https://your-public-site.example.com
 ```
 
-`.env.test` автоматически добавляется в `.gitignore` skillом.
+### 5. In Claude Code
 
-### Альтернатива — глобальный credentials file
+Just say:
 
-```bash
-export TEST_CREDENTIALS_FILE=~/.config/webtest-orch/credentials.env
-```
+> test the app
 
-В этом файле — секции для каждого проекта.
+or run the slash command `/test-app`. Skill auto-detects authed vs public, scaffolds Playwright + axe-core, runs the first exploratory pass, and writes `reports/<run-id>/index.html` you can open in a browser.
 
-### Запустить тест
-
-В Claude Code, в директории проекта:
-
-> «test the app»
-
-или
-
-> «check the login flow on https://your-app.example.com»
-
-Skill определит что делать (BOOTSTRAP / REPLAY / HYBRID) и пройдёт по checklist'у.
+For more triggering keywords (`smoke test`, `regression run`, `audit accessibility`, etc.), see [SKILL.md](SKILL.md).
 
 ---
 
-## Что получишь на выходе
+## What gets tested out of the box
 
-После прогона — папка `reports/<run-id>/`:
+Every generated spec runs through the **issues[] collector pattern** — all soft checks accumulate, the test fails once at the end with the full picture instead of stopping at the first miss:
 
-```
-reports/run-2026-04-28-1430/
-├── index.html        # интерактивный HTML-отчёт (Playwright + наш wrapper)
-├── report.md         # markdown-сводка (severity breakdown, top issues)
-├── bugs.json         # нормализованный список багов (S0–S3, P0–P3)
-├── diff.json         # new / regression / persisting / fixed bugs
-├── screenshots/      # failure screenshots (НЕ инлайнятся в чат)
-├── traces/           # Playwright traces для replay debugging
-└── network/          # HAR files
-```
+- **Console errors** — listeners attached BEFORE `page.goto()`. Default ignore-list covers GTM, Stripe deprecations, Sentry self-warnings, Pydantic FastAPI warnings, Next.js 15 Turbopack signals, Supabase realtime debug, ResizeObserver loop, AbortError on unmount, browser-extension noise, and 9 more patterns. Hydration mismatches, uncaught TypeErrors, CORS / CSP violations, 5xx / 4xx responses are reported with severity.
+- **WCAG 2.2 AA via axe-core** — every spec runs `AxeBuilder` and pushes each violation as `a11y[impact] rule-id: help (Nx nodes)` into `issues[]`. Severity inferred from axe impact level.
+- **Heading hierarchy** — no `h1 → h3` jumps. Detects the common Tailwind/headlessui pattern of project lists.
+- **Touch targets (WCAG 2.5.8)** — every interactive element ≥ 24×24 CSS px. Mobile project (`chromium-mobile`, 390×844) catches what desktop misses.
+- **Horizontal overflow** — `scrollWidth > clientWidth` per viewport.
+- **`html lang` attribute** — present.
 
-Сами `*.spec.ts` тесты — в `tests/specs/` проекта, коммитятся в репо.
+Visual regression uses Playwright's `toHaveScreenshot()` (zero external dependencies). When pixel-diff fires, `visual_diff.py` queues a vision-classification task and a Task subagent (one image, returns text) labels it `noise` / `redesign` / `bug-S0..3`.
 
 ---
 
-## Режимы работы
+## Severity model
 
-```
-detect_state.py → JSON
-  ├─ no tests/ + no playwright.config → BOOTSTRAP    (full first run, Playwright MCP exploration)
-  ├─ tests/ + specs покрывают flow    → REPLAY        (npx playwright test, ~$0 LLM cost)
-  └─ tests/ + новый flow              → HYBRID        (replay существующих + explore новых)
-```
-
-**BOOTSTRAP** — первый запуск. Skill scaffold'ит `playwright.config.ts`, `tests/auth.setup.ts`, `tests/fixtures/index.ts`, проводит API-login, исследует UI через ARIA snapshots, генерирует POMs и spec'ы.
-
-**REPLAY** — повторный запуск, тесты уже есть. `npx playwright test`, без LLM-вызовов на browser actions. LLM используется только для триажа НОВЫХ багов и отсутствующих в кеше console messages.
-
-**HYBRID** — есть тесты, но нужен новый flow. Replay существующего + exploratory loop на новый.
-
----
-
-## Image-budget protection (важно)
-
-**Проблема Claude Code:** есть отдельный лимит на inline images (~50–100 за сессию). Скриншоты Playwright MCP по умолчанию возвращаются inline — забивают этот лимит и ломают сессию через `/compact` даже при пустом text-контексте.
-
-**Решение skill'а:** скриншоты НИКОГДА не возвращаются в parent чат. Все browser-операции дискатчатся через Task subagent. Subagent сжигает свой image budget, parent остаётся чист. Vision-классификация (если нужна) — nested subagent на ОДИН screenshot, возвращает текстовый verdict.
-
-Это hard rule в SKILL.md. Если когда-нибудь увидишь что Claude вернул screenshot inline во время skill execution — это баг skill'а, сообщи.
-
----
-
-## Troubleshooting
-
-| Симптом | Что проверить |
+| Severity | When the skill assigns it |
 |---|---|
-| «Unknown skill: webtest-orch» | `ls ~/.claude/skills/webtest-orch/SKILL.md`. Если есть — Claude Code не подхватил, нужен полный рестарт CLI. |
-| Skill активировался, но probes пустые | `python ~/.claude/skills/webtest-orch/scripts/detect_state.py --human` руками — должен показать таблицу |
-| `Isolation verified: no` в probes | Запустить Step 0 self-test (см. SKILL.md), либо вручную: `python scripts/_image_isolation_check.py --gen-fixtures` → диспатчить subagent → `--mark-verified` |
-| Playwright MCP не работает | `claude mcp list` — должен показать `playwright: ✓ Connected` |
-| `auth.setup.ts` падает на API-login | Проверь `TEST_API_LOGIN_PATH`, `TEST_API_TOKEN_FIELD` в `.env.test`. Skill потом сделает fallback на UI-login. |
+| **S0 Critical** | Auth broken, payment fails, 5xx on main routes, uncaught JS errors, hydration mismatch on critical flow |
+| **S1 Major** | Form non-functional, primary nav broken, CORS / CSP violation, axe `serious` / `critical`, horizontal overflow |
+| **S2 Moderate** | Validation message wrong, secondary feature degraded, axe `moderate`, heading jump, touch-target < 24×24, html-lang missing |
+| **S3 Minor** | Visual / pixel diff, alignment shifts, axe `minor`, title check failure |
+
+Override the heuristic per-spec using **three mechanisms** (priority order):
+
+1. Inline tag in collector: `issues.push('[severity:S0] payment completely broken')`
+2. Inline tag in test name: `test('[severity:S0] checkout fails', ...)`
+3. Comment before the test: `// @severity: S0\n  test('...', ...)` → parsed by `fingerprint_bugs.py`
+
+This solves the false-negative case where a P0 product regression scores S2 by heuristic and the report says ✅ SHIP-READY.
 
 ---
 
-## Структура skill (для разработчика skill'а)
+## CLI commands
 
-```
-~/.claude/skills/webtest-orch/
-├── SKILL.md                         # workflow для Claude (не редактировать без знания формата)
-├── README.md                        # этот файл
-├── install.sh                       # copy/symlink в ~/.claude/skills/
-├── LICENSE.txt                      # MIT
-├── .isolation-verified              # marker: image-budget contract OK
-├── scripts/
-│   ├── detect_state.py              # state probe → JSON
-│   ├── with_server.py               # dev-server lifecycle
-│   ├── _image_isolation_check.py    # image-budget self-test helper
-│   ├── run_suite.py                 # (Day 2) wraps `playwright test`
-│   ├── fingerprint_bugs.py          # (Day 2) bug dedup + run diff
-│   ├── triage_console.py            # (Day 3) console noise filter
-│   ├── visual_diff.py               # (Day 3) pixel diff + nested-subagent vision
-│   └── generate_report.py           # (Day 4) markdown + html + bugs.json
-├── reference/
-│   ├── playwright-patterns.md       # locator priority, anti-flake
-│   ├── auth-strategies.md           # (Day 2) API-login, JWT, storageState
-│   ├── a11y-patterns.md             # (Day 3) axe + qualitative checks
-│   ├── responsive-checklist.md      # (Day 3) viewports, touch targets
-│   ├── console-noise-patterns.md    # (Day 3) ignore-list defaults
-│   ├── stack-specific.md            # (Day 4) Next.js, FastAPI, TG WebApp, WS/SSE
-│   └── reporting.md                 # (Day 4) JSON schema + tracker mappings
-├── templates/
-│   ├── playwright.config.ts.tmpl
-│   ├── auth.setup.ts.tmpl
-│   ├── fixture.ts.tmpl
-│   ├── pom.ts.tmpl
-│   └── spec.ts.tmpl
-├── examples/
-│   └── *.spec.ts                    # реальные сгенерированные артефакты
-└── fixtures/iso-test/{a,b,c}.png    # для self-test
+```bash
+npx webtest-orch help              # all commands
+npx webtest-orch status            # is the skill installed? are MCPs present?
+npx webtest-orch install           # copy mode (default; production-safe)
+npx webtest-orch install --symlink # symlink mode (development; needs admin on Windows)
+npx webtest-orch uninstall         # removes the skill, leaves the npm package
+npx webtest-orch version
 ```
 
-For development: clone the repo, edit files, then run `bash install.sh` to re-deploy into `~/.claude/skills/`.
+---
+
+## Documentation
+
+- **[SKILL.md](SKILL.md)** — workflow Claude follows when activated, with the canonical spec generation contract.
+- **[CHANGELOG.md](CHANGELOG.md)** — versioned per release; current beta is `0.3.0`.
+- **[reference/auth-strategies.md](reference/auth-strategies.md)** — Supabase / custom JWT / UI fallback / onboarding flags.
+- **[reference/stack-specific.md](reference/stack-specific.md)** — Next.js, FastAPI, Telegram WebApp, WebSocket DOM-fallback strategy, TTS canvas patterns.
+- **[reference/reporting.md](reference/reporting.md)** — bugs.json schema, severity mapping, Linear / GitHub / Jira CLI examples.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — PR workflow.
+
+---
+
+## Status — public beta
+
+**`0.3.0-beta`** — image-budget protection, Supabase auth, severity annotations, full CI on Linux/macOS/Windows, 113 tests. Validated end-to-end on two production apps. Looking for early users to find the rough edges — see the **[OS-compatibility report](.github/ISSUE_TEMPLATE/os-compatibility-report.md)** issue template if you ran the install on a non-Windows OS.
+
+What's next:
+- `0.4.0` — vision-classifier auto-loop, console LLM auto-triage, Lighthouse audit script, tracker auto-filing CLI, regression watchlist, layout integrity assertions.
 
 ---
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 ## Contributing
 
-PRs welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md). For OS-specific bug reports use the dedicated issue template.
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). For OS-specific bug reports use the dedicated [issue template](.github/ISSUE_TEMPLATE/os-compatibility-report.md).
