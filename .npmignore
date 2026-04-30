@@ -1,0 +1,34 @@
+# npm package contents are governed by package.json `files`.
+# This .npmignore is a belt-and-suspenders second filter for things that
+# can sneak in via included directories.
+
+# Python build artefacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Repo dev infra (not needed by end users)
+tests/
+.github/
+pyproject.toml
+requirements-dev.txt
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Skill state from local dev runs
+.isolation-verified
+fixtures/iso-test/
+playwright/.auth/
+test-results/
+playwright-report/
+reports/
+
+# Local env
+.env*

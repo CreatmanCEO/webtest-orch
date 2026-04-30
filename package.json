@@ -42,6 +42,7 @@
   },
   "type": "commonjs",
   "scripts": {
-    "test": "echo 'Python tests live under tests/python/. Run: pip install -r requirements-dev.txt && pytest'"
+    "test": "echo 'Python tests live under tests/python/. Run: pip install -r requirements-dev.txt && pytest'",
+    "prepack": "node -e \"const fs=require('fs'),p=require('path'),walk=(d)=>fs.existsSync(d)&&fs.readdirSync(d).forEach(f=>{const x=p.join(d,f);if(fs.statSync(x).isDirectory()){if(f==='__pycache__'){fs.rmSync(x,{recursive:true,force:true});console.log('cleaned',x);}else walk(x);}});walk('scripts');walk('tests');walk('examples');\""
   }
 }
