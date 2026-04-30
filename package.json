@@ -1,6 +1,6 @@
 {
   "name": "webtest-orch",
-  "version": "0.3.0-beta",
+  "version": "0.3.1-beta",
   "description": "Claude Code skill for end-to-end web app testing — image-budget-safe, deterministic replay, multi-stack scaffolding",
   "license": "MIT",
   "author": "webtest-orch contributors",

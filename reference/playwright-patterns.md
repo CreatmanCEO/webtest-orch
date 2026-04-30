@@ -182,9 +182,21 @@ test.describe('<feature> — <short scope>', () => {
 
 ## Healing policy
 
-Playwright Test Agents (`init-agents --loop=claude`) ship a Healer. The skill's
-default config: Healer **patches locators** only when the patched test still
-exercises the same intent (same accessible name, same role). For UI behaviour
-changes (button does nothing now, form submits but doesn't validate), Healer
-must mark the test `test.skip` and emit a bug record — it does NOT silently
-adapt. Adapt only what's accidental; surface what's substantive.
+**webtest-orch does NOT ship self-healing.** This is intentional, not a gap.
+The QA community in 2026 has begun pushing back on self-healing as marketing
+spin — the failure mode is well-documented: a healer picks a visually-similar-
+but-wrong element ("Pay now" → wrong button), the test goes green, and the bug
+ships. Engineers stop trusting suites that *lie*. We prefer red over false-green.
+
+If you want native Playwright self-healing, it's free and opt-in — Microsoft
+ships **Test Agents** (`npx playwright init-agents --loop=claude`) with a built-
+in Healer. webtest-orch is compatible. **Recommended policy** when you enable it:
+
+- Healer **may patch locators** only when the patched test still exercises the
+  same intent (same accessible name, same role).
+- For UI behaviour changes (button does nothing now, form submits but doesn't
+  validate), Healer must mark the test `test.skip` and emit a bug record — it
+  does NOT silently adapt.
+
+Adapt only what's accidental; surface what's substantive. Silent healing
+is how a regression ships in green CI.

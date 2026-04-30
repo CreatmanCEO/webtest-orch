@@ -14,6 +14,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Regression watchlist mechanism (sticky fixed → escalate on regression)
 - Layout integrity assertions (max-width, icon grouping patterns)
 
+## [0.3.1-beta] - 2026-04-30
+
+Documentation-only re-positioning release. No functional changes; same 113 tests, same CI matrix.
+
+### Changed
+- **README rewritten** around honest positioning: "token-efficient e2e orchestration skill for Claude Code." Hook leads with verified token-cost numbers (Playwright MCP ~1.5M tokens / Playwright CLI ~25–27k per Özal / TestDino / Morph benchmarks), real peer group is the free / OSS tier (`playwright init-agents --loop=claude` + Magnitude), explicit honest table separating where the skill genuinely competes vs where claiming "alternative to Octomind / QA Wolf" would overstate. Validation section now links to the actual public OSS apps it was tested on ([CreatmanCEO/portfolio](https://github.com/CreatmanCEO/portfolio), [CreatmanCEO/lingua-companion](https://github.com/CreatmanCEO/lingua-companion)).
+- **README.ru.md rewritten** with the same positioning frame.
+- **`reference/playwright-patterns.md` "Healing policy" section clarified** — webtest-orch deliberately does NOT ship self-healing. Rationale: the QA community has pushed back on self-healing as marketing spin (false-green from visually-similar-but-wrong elements). Microsoft's native `init-agents --loop=claude` Healer is free, opt-in, and our generated specs are compatible — recommended skip-real-bugs policy documented.
+- **Repo description** updated to: "Token-efficient e2e orchestration skill for Claude Code: explore once, replay deterministically. Playwright + axe-core + run-diff. Tests stay in your repo. MIT."
+- **Topics** swapped: removed `claude-code-config` and `image-budget`, added `test-orchestration` and `playwright-testing` for discoverability via the dominant 2026 search terms.
+
+### Added (docs only)
+- "Built on real benchmarks" section in README — every architectural choice cited to a verifiable source (Özal benchmark on GitHub, TestDino, Morph, Microsoft Fara-7B paper, arXiv 2511.19477, Deque WCAG study, W3C, Anthropic skill spec).
+- "Related work and credible voices" section linking to Simon Willison's TIL, Matt Pocock's `skills` repo (45k★), Alexander Opalic's "AI QA Engineer" tutorial, Pramod Dutta's token-cost analysis, and Microsoft's `init-agents` docs.
+- "What we deliberately do NOT ship" section — explicit on no self-healing, no vendor cloud, no "AI writes all your tests" pitch.
+
 ## [0.3.0-beta] - 2026-04-29
 
 Distribution milestone — installable via `npx webtest-orch@beta install` instead of git-clone-and-bash.
@@ -145,7 +161,8 @@ Initial public beta. Validated end-to-end on a real production app
 - macOS / Linux installers untested in CI; help wanted (see
   `os-compatibility-report` issue template).
 
-[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.0-beta...HEAD
+[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.1-beta...HEAD
+[0.3.1-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.0-beta...v0.3.1-beta
 [0.3.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.2.0-beta...v0.3.0-beta
 [0.2.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.1.0-beta...v0.2.0-beta
 [0.1.0-beta]: https://github.com/CreatmanCEO/webtest-orch/releases/tag/v0.1.0-beta
