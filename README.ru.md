@@ -252,7 +252,7 @@ npx webtest-orch version
 Оба target-приложения public на GitHub — можно сходить и посмотреть. Это не синтетические бенчмарки:
 
 - **[Персональное портфолио](https://github.com/CreatmanCEO/portfolio)** ([creatman.site](https://creatman.site)) — static Next.js, mobile viewport. Skill нашёл 4 реальных бага, **0 false positives**: 1× S1 axe color-contrast (8 элементов), 2× S2 touch-target < 24×24, 1× S2 heading-jump h1→h3. Total tokens: <500k. Image budget сожжённый в parent: **0**.
-- **[Lingua Companion](https://github.com/CreatmanCEO/lingua-companion)** ([lingua.creatman.site](https://lingua.creatman.site)) — voice-first AI language-learning SaaS, Next.js 16 + FastAPI + Supabase + WebSocket + Deepgram + Groq + ElevenLabs. 11 спеков на login / chat / translation / TTS / settings / phrase library / scenario / stats / end-session / logout. **10/10 сгенерированных спеков прошли зелёным** после 4 итераций. Wall-clock first-run: ~12 минут.
+- **[Lingua Companion](https://github.com/CreatmanCEO/lingua-companion)** — voice-first AI language-learning SaaS (private beta), Next.js 16 + FastAPI + Supabase + WebSocket + Deepgram + Groq + ElevenLabs. 11 спеков на login / chat / translation / TTS / settings / phrase library / scenario / stats / end-session / logout. **10/10 сгенерированных спеков прошли зелёным** после 4 итераций. Wall-clock first-run: ~12 минут.
 
 Lingua-dogfood выдал 6 feedback-айтемов, ставших `0.2.0` фиксами — Supabase auth pattern, onboarding-overlay state-seeding, severity annotations, spec generation contract enforcement, doc-drift fix, locator-quality guidance. Догфудим собственную работу на собственных OSS-приложениях.
 

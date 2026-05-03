@@ -265,7 +265,7 @@ npx webtest-orch version
 Both target apps are public on GitHub — go look. These aren't synthetic benchmarks:
 
 - **[Personal portfolio](https://github.com/CreatmanCEO/portfolio)** ([creatman.site](https://creatman.site)) — static Next.js, mobile viewport. Skill found 4 real bugs, **0 false positives**: 1× S1 axe color-contrast (8 elements), 2× S2 touch-target < 24×24, 1× S2 heading-jump h1→h3. Total tokens: <500k. Image budget burned in parent: **0**.
-- **[Lingua Companion](https://github.com/CreatmanCEO/lingua-companion)** ([lingua.creatman.site](https://lingua.creatman.site)) — voice-first AI language-learning SaaS, Next.js 16 + FastAPI + Supabase + WebSocket + Deepgram + Groq + ElevenLabs. 11 specs across login / chat / translation / TTS / settings / phrase library / scenario / stats / end-session / logout. **10/10 generated specs ran green** after 4 iterations. Wall-clock first-run: ~12 min.
+- **[Lingua Companion](https://github.com/CreatmanCEO/lingua-companion)** — voice-first AI language-learning SaaS (private beta), Next.js 16 + FastAPI + Supabase + WebSocket + Deepgram + Groq + ElevenLabs. 11 specs across login / chat / translation / TTS / settings / phrase library / scenario / stats / end-session / logout. **10/10 generated specs ran green** after 4 iterations. Wall-clock first-run: ~12 min.
 
 The Lingua dogfood produced 6 feedback items that became `0.2.0` fixes — Supabase auth pattern, onboarding-overlay state-seeding, severity annotations, spec generation contract enforcement, doc-drift fix, locator-quality guidance. We dogfood our own work on our own OSS apps.
 
