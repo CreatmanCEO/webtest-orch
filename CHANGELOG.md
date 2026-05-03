@@ -14,7 +14,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Regression watchlist mechanism (sticky fixed → escalate on regression)
 - Layout integrity assertions (max-width, icon grouping patterns)
 
+## [0.3.2-beta] - 2026-05-03
+
+Documentation-only redaction release.
+
+### Changed
+- Removed direct reference to `lingua.creatman.site` in the validation section of README.md and README.ru.md. Lingua Companion is in private beta — its production domain should not appear in any public webtest-orch artefact until product launch. The github repo link (`github.com/CreatmanCEO/lingua-companion`) remains; the domain link is replaced with a `(private beta)` descriptor inline.
+- `0.3.1-beta` is now deprecated on npm. Users should upgrade to `0.3.2-beta` via `npx webtest-orch@beta install`.
+
+### Note
+No functional changes. Same 113 tests. Same CI matrix.
+
 ## [0.3.1-beta] - 2026-04-30
+
+⚠️ **Deprecated.** Contains a stray production-domain reference for an app that's still in private beta. Use `0.3.2-beta` or later.
 
 Documentation-only re-positioning release. No functional changes; same 113 tests, same CI matrix.
 
@@ -161,7 +174,8 @@ Initial public beta. Validated end-to-end on a real production app
 - macOS / Linux installers untested in CI; help wanted (see
   `os-compatibility-report` issue template).
 
-[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.1-beta...HEAD
+[Unreleased]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.2-beta...HEAD
+[0.3.2-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.1-beta...v0.3.2-beta
 [0.3.1-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.3.0-beta...v0.3.1-beta
 [0.3.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.2.0-beta...v0.3.0-beta
 [0.2.0-beta]: https://github.com/CreatmanCEO/webtest-orch/compare/v0.1.0-beta...v0.2.0-beta
