@@ -1,35 +1,33 @@
-# Skill state
-.isolation-verified
-fixtures/iso-test/
 
+# Build output (when we publish to npm)
+# Editors / OS
+# Local env
+# Python
+# Skill state
 # Test artefacts (the skill writes these into target projects, not into the skill repo,
 # but contributors may have them lying around when they hand-test)
-node_modules/
-test-results/
-playwright-report/
-playwright/.auth/
-reports/
 **/*.spec.ts.snap
-
-# Python
-__pycache__/
+*.env.local
 *.pyc
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# Editors / OS
-.vscode/
-.idea/
+*.tsbuildinfo
 .DS_Store
-Thumbs.db
-
-# Local env
+.coverage
 .env
 .env.local
 .env.test
-*.env.local
-
-# Build output (when we publish to npm)
+.idea/
+.isolation-verified
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.vscode/
+Thumbs.db
+__pycache__/
 dist/
-*.tsbuildinfo
+fixtures/iso-test/
+htmlcov/
+node_modules/
+playwright-report/
+playwright/.auth/
+reports/
+test-results/

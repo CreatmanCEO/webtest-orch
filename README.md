@@ -296,6 +296,21 @@ If you're researching AI-driven web testing in 2026, these are the canonical ref
 
 ---
 
+## Related — Claude Code ecosystem by the same author
+
+If webtest-orch is interesting, these companion repos are likely too — same author, same voice, all built around Claude Code:
+
+- [`claude-code-antiregression-setup`](https://github.com/CreatmanCEO/claude-code-antiregression-setup) — `CLAUDE.md` + subagents + hooks pattern. Featured on [Habr](https://habr.com/ru/articles/1013330/) (top-5 of the day, 20K reads).
+- [`ai-context-hierarchy`](https://github.com/CreatmanCEO/ai-context-hierarchy) — three-level context system. Featured in the [Graphify v5.0 roadmap](https://github.com/safishamsi/graphify/issues/425).
+- [`claude-statusline`](https://github.com/CreatmanCEO/claude-statusline) — statusline for Claude Code with VPS health monitoring. Featured on [Habr](https://habr.com/ru/articles/1013414/).
+- [`notebooklm-claude-workflows`](https://github.com/CreatmanCEO/notebooklm-claude-workflows) — seven slash-commands for Google NotebookLM research pipelines.
+- [`lingua-companion`](https://github.com/CreatmanCEO/lingua-companion) — voice-first English tutor for Russian-speaking IT professionals (one of webtest-orch's validation targets).
+- [`security-scanner`](https://github.com/CreatmanCEO/security-scanner) — mobile threat detection through VPN traffic analysis.
+- [`diabot`](https://github.com/CreatmanCEO/diabot) — non-commercial Telegram bot for type 1 diabetes (food photo → carb counting).
+- [`ghost-showcase`](https://github.com/CreatmanCEO/ghost-showcase) — invisible AI assistant for Windows (commercial product showcase).
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
@@ -303,3 +318,12 @@ MIT — see [LICENSE](LICENSE).
 ## Contributing
 
 PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). For OS-specific bug reports use the dedicated [issue template](.github/ISSUE_TEMPLATE/os-compatibility-report.md).
+
+## Author
+
+**Nick Podolyak** — Python developer and digital architect at [CREATMAN](https://creatman.site)
+
+- GitHub: [@CreatmanCEO](https://github.com/CreatmanCEO)
+- Habr: [creatman](https://habr.com/ru/users/creatman/)
+- dev.to: [@creatman](https://dev.to/creatman)
+- Telegram: [@Creatman_it](https://t.me/Creatman_it)
